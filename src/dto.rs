@@ -1,5 +1,4 @@
 use ::std::error::Error;
-
 use axum::{
 	async_trait,
 	extract::{rejection::JsonRejection, FromRequest, Request},
@@ -8,11 +7,12 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::system_models::AppError;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 pub struct ApiTransaction {
 	pub op_date: DateTime<Utc>,
 	pub gas_station_id: Uuid,
