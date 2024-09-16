@@ -2,23 +2,12 @@ use super::super::Store;
 use crate::dto::{ApiTransaction, TxId, UserId};
 use crate::repository::models::Transaction;
 use crate::system_models::AppError;
-use ::std::sync::{Arc, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use ::std::sync::Arc;
 use chrono::Utc;
 use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::Decimal;
+use tokio::sync::RwLock;
 use uuid::Uuid;
-
-impl<'a, T: ?Sized + 'a> From<PoisonError<RwLockReadGuard<'a, T>>> for AppError {
-	fn from(err: PoisonError<RwLockReadGuard<'a, T>>) -> Self {
-		return AppError::SystemError(err.to_string());
-	}
-}
-
-impl<'a, T: ?Sized + 'a> From<PoisonError<RwLockWriteGuard<'a, T>>> for AppError {
-	fn from(err: PoisonError<RwLockWriteGuard<'a, T>>) -> Self {
-		return AppError::SystemError(err.to_string());
-	}
-}
 
 #[derive(Clone)]
 pub struct MockStore {
@@ -35,12 +24,12 @@ impl MockStore {
 
 impl Store for MockStore {
 	async fn get_transactions_list(&self) -> Result<Vec<Transaction>, AppError> {
-		let current_store = self.store.read()?;
+		let current_store = self.store.read().await;
 		return Ok(current_store.iter().cloned().collect());
 	}
 
 	async fn get_transaction(&self, TxId(tx_id): TxId) -> Result<Transaction, AppError> {
-		let current_store = self.store.read()?;
+		let current_store = self.store.read().await;
 		let entry = current_store.iter().find(|tx| tx.id == tx_id);
 
 		return match entry {
@@ -92,7 +81,7 @@ impl Store for MockStore {
 			deleted: false,
 		};
 
-		let mut current_store = self.store.write()?;
+		let mut current_store = self.store.write().await;
 		current_store.push(tx.clone());
 
 		return Ok(tx);
@@ -104,7 +93,7 @@ impl Store for MockStore {
 		UserId(user_id): UserId,
 		tx: ApiTransaction,
 	) -> Result<Transaction, AppError> {
-		let mut current_store = self.store.write()?;
+		let mut current_store = self.store.write().await;
 
 		let existing_tx = current_store.iter_mut().find(|t| t.id == tx_id);
 
@@ -144,7 +133,7 @@ impl Store for MockStore {
 		TxId(tx_id): TxId,
 		UserId(user_id): UserId,
 	) -> Result<(), AppError> {
-		let mut current_store = self.store.write()?;
+		let mut current_store = self.store.write().await;
 
 		let existing_tx = current_store.iter_mut().find(|t| t.id == tx_id);
 
